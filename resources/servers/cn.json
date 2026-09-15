@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "cn",
+  "name": "国服",
+  "language": "zh-Hans",
+  "timeZone": "Asia/Shanghai",
+  "channels": [
+    {"id": "official", "name": "官服", "packageName": null},
+    {"id": "bilibili", "name": "B服", "packageName": "com.RoamingStar.BlueArchive.bilibili"}
+  ],
+  "verification": "awaiting-device-capture",
+  "workflows": []
+}
