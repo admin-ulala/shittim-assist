@@ -2,6 +2,8 @@
 
 面向《蔚蓝档案》的 Windows / Android 自动化工作台。名字取自「什亭之匣」，希望帮助老师处理重复事务。
 
+[GitHub 仓库](https://github.com/admin-ulala/shittim-assist) · [自动构建](https://github.com/admin-ulala/shittim-assist/actions)
+
 **当前为 0.1 开发预览：基础设施已实现，国服 B 服日常仍在适配，暂不能一键清日常。**
 
 ## 已有能力
