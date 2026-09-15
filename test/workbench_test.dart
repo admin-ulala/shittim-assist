@@ -29,7 +29,12 @@ void main() {
       }
     }
   });
-  for (final size in [const Size(1440, 1000), const Size(390, 844)]) {
+  for (final size in [
+    const Size(1440, 1000),
+    const Size(390, 844),
+    const Size(800, 450),
+    const Size(640, 360),
+  ]) {
     testWidgets('workbench navigation fits ${size.width}', (tester) async {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1;

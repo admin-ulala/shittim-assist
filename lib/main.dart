@@ -394,6 +394,14 @@ class _WorkbenchState extends State<Workbench> {
       ),
     ),
   );
+  double _statWidth(bool wide) {
+    final available = (MediaQuery.sizeOf(context).width - (wide ? 292 : 36))
+        .clamp(0.0, double.infinity);
+    return available > 700
+        ? (available - 48) / 4
+        : ((available - 16) / 2).clamp(0.0, double.infinity);
+  }
+
   Widget overview(bool wide) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
@@ -456,31 +464,27 @@ class _WorkbenchState extends State<Workbench> {
         ),
       ),
       const SizedBox(height: 20),
-      LayoutBuilder(
-        builder: (context, c) => Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            for (final item in [
-              ('当前设备', device?.id ?? '尚未连接'),
-              ('适配区服', channel == 'bilibili' ? '国服 · B 服' : '国服 · 官服待适配'),
-              ('执行模式', dryRun ? '只识别，不点击' : '允许已验证步骤'),
-              ('资源预算', '青辉石 0 · 付费 0'),
-            ])
-              SizedBox(
-                width: c.maxWidth > 700
-                    ? (c.maxWidth - 48) / 4
-                    : (c.maxWidth - 16) / 2,
-                child: card(
-                  item.$1,
-                  Text(
-                    item.$2,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
+      Wrap(
+        spacing: 16,
+        runSpacing: 16,
+        children: [
+          for (final item in [
+            ('当前设备', device?.id ?? '尚未连接'),
+            ('适配区服', channel == 'bilibili' ? '国服 · B 服' : '国服 · 官服待适配'),
+            ('执行模式', dryRun ? '只识别，不点击' : '允许已验证步骤'),
+            ('资源预算', '青辉石 0 · 付费 0'),
+          ])
+            SizedBox(
+              width: _statWidth(wide),
+              child: card(
+                item.$1,
+                Text(
+                  item.$2,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
       const SizedBox(height: 20),
       card(
