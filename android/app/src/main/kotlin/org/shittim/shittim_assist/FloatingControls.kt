@@ -279,15 +279,17 @@ class FloatingControls(private val service: GestureService) {
         if (root == null) return 0L
         hidden++
         val after = System.nanoTime()
-        root?.visibility = View.INVISIBLE
+        if (hidden == 1) root?.let { if (it.isAttachedToWindow) wm.removeViewImmediate(it) }
         return after
     }
     fun restoreAfterCapture() {
         hidden = (hidden - 1).coerceAtLeast(0)
-        if (hidden == 0) root?.visibility = View.VISIBLE
+        if (hidden == 0) root?.let {
+            if (!it.isAttachedToWindow) wm.addView(it, params)
+        }
     }
     fun close() {
-        root?.let { wm.removeView(it) }
+        root?.let { if (it.isAttachedToWindow) wm.removeView(it) }
         root = null; body = null; scroller = null; footer = null; hidden = 0
     }
 }

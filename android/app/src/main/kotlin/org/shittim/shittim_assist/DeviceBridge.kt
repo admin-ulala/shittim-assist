@@ -73,14 +73,20 @@ class DeviceBridge(private val context: Context, engine: FlutterEngine) {
                             if (service == null) result.error("CAPTURE_OFF", "请先授权屏幕采集", null)
                             else {
                                 val overlay = GestureService.instance?.overlay
-                                val after = overlay?.hideForCapture() ?: 0L
-                                service.screenshot(after) { bytes, error ->
-                                    handler.post {
-                                        overlay?.restoreAfterCapture()
-                                        if (bytes != null) result.success(bytes)
-                                        else result.error("CAPTURE_FAILED", error, null)
+                                val hiddenAt = overlay?.hideForCapture() ?: 0L
+                                // Window removal and the virtual-display producer are asynchronous.
+                                // Let the compositor settle, then require a NEW producer frame.
+                                // A timestamp taken before removal can accept a still-visible frame.
+                                handler.postDelayed({
+                                    val after = if (hiddenAt == 0L) 0L else System.nanoTime()
+                                    service.screenshot(after) { bytes, error ->
+                                        handler.post {
+                                            overlay?.restoreAfterCapture()
+                                            if (bytes != null) result.success(bytes)
+                                            else result.error("CAPTURE_FAILED", error, null)
+                                        }
                                     }
-                                }
+                                }, if (hiddenAt == 0L) 0L else 200L)
                             }
                         }
                         "showOverlay" -> {
