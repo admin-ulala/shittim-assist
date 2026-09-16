@@ -2,37 +2,37 @@
 
 ## 2026-09-16 开发预览
 
-### 0.1.1 冷启动修正（验证中）
+### 0.1.1 冷启动修正（已验证）
 
-初始 APK 在 MuMu 安装成功，但普通冷启动触发首页 LayoutBuilder 的 `debugNeedsLayout` 断言；调试暂停后启动正常。现已移除该布局回调，使用窗口尺寸计算统计卡片宽度，并增加 800×450、640×360 横屏测试。新 APK 冷启动尚待验证，初始 APK 不应作为可用版本推荐。
+初始 APK 在 MuMu 安装成功，但普通冷启动触发首页 LayoutBuilder 的 `debugNeedsLayout` 断言；调试暂停后启动正常。现已移除该布局回调，使用窗口尺寸计算统计卡片宽度，并增加 800×450、640×360 横屏测试。0.1.1 已在 MuMu 安装并正常冷启动，首页、设备页和原生权限状态查询通过。无障碍与屏幕采集权限未授予，实际采集/手势联调仍待完成。不要使用初始 0.1.0 APK。
 
 | 模块 | 实现 | 验证 |
 | --- | --- | --- |
-| 自适应 UI | 已实现 | 1440×1000、390×844 渲染及导航通过 |
+| 自适应 UI | 已实现 | 桌面/竖屏/横屏布局及导航通过；Android 冷启动通过 |
 | ADB 发现/连接/配对 | 已实现 | 发现实机通过，connect/pair 待实机 |
 | ADB 截图/前台 | 已实现 | MuMu B 服通过 |
 | 输入 API | 已实现 | 防误触测试通过，原生手势待验证 |
 | 暂停/取消/互斥/重试 | 已实现 | 单元测试通过 |
 | Dart 模板匹配 | 参考实现 | 合成样本与实际截图裁剪回放通过 |
 | JSON 配置/JSONL 日志 | 已实现 | 校验、保存、脱敏通过 |
-| Android 采集/无障碍 | 已实现 | CI APK 编译通过；权限和手势未实机验证 |
+| Android 采集/无障碍 | 已实现 | APK 安装启动与状态桥接通过；实际采集/手势未验证 |
 | 邮件/签到/日常/扫荡 | 仅配置 | 无可执行流程 |
 | OCR/OpenCV/主线/其他区服 | 未实现 | — |
 | CI | 已运行 | test / windows / android 全部成功 |
 
-已完成 Flutter analyze（无问题）及 11 项测试：8 项核心、2 项布局、1 项显式开启的只读实机检查。以最新实际检查更新本文件。
+已完成 Flutter analyze（无问题）及 13 项测试：8 项核心、4 项布局、1 项显式开启的只读实机检查。默认 CI 跳过实机项。
 
 ## 构建缺项
 
 - 本机 Windows 构建缺 Visual Studio C++ 工具链；GitHub CI 构建成功。
 - 本机 APK 构建缺 Android SDK；GitHub CI debug APK 构建成功。
 - Flutter SDK 已下载并通过官方 SHA-256 校验，保存在仓库外。
-- CI 已产出 Windows preview ZIP 和 Android debug APK artifact。界面图片仍来自 Flutter 渲染测试，不是安装包实机截图。
+- CI 已产出 Windows preview ZIP 和 Android debug APK artifact。桌面预览图来自 Flutter 渲染测试，Android 图来自 MuMu 实际安装包。
 
 ## 仓库
 
 公开仓库：https://github.com/admin-ulala/shittim-assist
 
-首个提交 `6fa2af3` 已推送，远端 main 与本地提交哈希核对一致。[CI run 35007095532](https://github.com/admin-ulala/shittim-assist/actions/runs/35007095532) 的 test、windows、android 三个任务均成功。此前审批服务暂时阻止查询，重新审批后已核实结果。
+修正版提交 `6f63b0f` 已通过 GitHub Git Database API 上传，blob、tree、commit 与本地哈希逐级核对一致，并以非强制方式更新 main。[CI run 35035264060](https://github.com/admin-ulala/shittim-assist/actions/runs/35035264060) 全部成功。
 
-产物：Windows ZIP 12,226,774 bytes；Android artifact ZIP 72,189,292 bytes。正式 APK 签名、Android 权限联调和日常流程仍待完成。
+0.1.1 产物：Windows ZIP 12,225,362 bytes；Android artifact ZIP 72,189,218 bytes。两份下载均已与 GitHub artifact SHA-256 校验一致。正式 APK 签名、Android 权限联调和日常流程仍待完成。

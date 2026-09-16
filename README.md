@@ -53,7 +53,17 @@ Android 正式签名未配置。CI 仅生成 debug APK，不是正式发布包�
 
 **当前没有悬浮任务面板和后台流程宿主。** 本机模式用于服务联调，不能宣称已支持离开工作台后自动清日常。APK 已在 CI 编译通过，系统授权和手势仍待实机验证。
 
-首个版本的 Windows ZIP 与 Android debug APK 可从[成功构建记录](https://github.com/admin-ulala/shittim-assist/actions/runs/35007095532)的 Artifacts 区域下载（GitHub 可能要求登录）。
+**0.1.1** Windows ZIP 与 Android debug APK 可从[成功构建记录](https://github.com/admin-ulala/shittim-assist/actions/runs/35035264060)的 Artifacts 区域下载（GitHub 可能要求登录）。此版修复 Android 冷启动红屏，并已在 MuMu 安装验证。不同 CI 构建的 debug 签名可能不同；测试版本之间可能需要卸载旧助手后安装，会清除助手配置，正式发布前将建立稳定签名。
+
+## 界面
+
+桌面布局渲染预览：
+
+![桌面工作台布局](docs/images/desktop-preview.png)
+
+Android 0.1.1 在 MuMu 上实际运行：
+
+![Android 实机工作台](docs/images/android-mumu.png)
 
 ## 实机测试（只读）
 
