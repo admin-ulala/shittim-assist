@@ -26,6 +26,8 @@ class CaptureService : Service() {
     private var reader: ImageReader? = null
     private var latest: ByteArray? = null
     private var capturedAt = 0L
+    private var frameTimestamp = 0L
+    private var pendingAfter = 0L
     private var pending: ((ByteArray?, String?) -> Unit)? = null
     private val projectionCallback = object : MediaProjection.Callback() {
         override fun onStop() { active = false; stopSelf() }
@@ -88,7 +90,8 @@ class CaptureService : Service() {
                             latest = stream.toByteArray(); capturedAt = SystemClock.elapsedRealtime()
                             if (cropped !== padded) cropped.recycle()
                             padded.recycle()
-                            pending?.invoke(latest, null); pending = null
+                            frameTimestamp = image.timestamp
+                            if (frameTimestamp > pendingAfter) { pending?.invoke(latest, null); pending = null }
                         }
                     } catch (_: Exception) {
                         latest = null; pending?.invoke(null, "截图编码失败"); pending = null
@@ -115,14 +118,15 @@ class CaptureService : Service() {
             }
         }
     }
-    fun screenshot(callback: (ByteArray?, String?) -> Unit) {
+    fun screenshot(afterNanos: Long = 0L, callback: (ByteArray?, String?) -> Unit) {
         handler.post {
             if (!active) { callback(null, "采集服务未就绪"); return@post }
             if (pending != null) { callback(null, "已有截图请求"); return@post }
             val bytes = latest
-            if (bytes != null && SystemClock.elapsedRealtime() - capturedAt < 750) {
+            if (bytes != null && frameTimestamp > afterNanos && SystemClock.elapsedRealtime() - capturedAt < 750) {
                 callback(bytes, null); return@post
             }
+            pendingAfter = afterNanos
             pending = callback
             handler.postDelayed({
                 if (pending === callback) { pending = null; callback(null, "截图超时或屏幕已锁定") }
@@ -131,6 +135,8 @@ class CaptureService : Service() {
     }
     override fun onDestroy() {
         active = false; instance = null
+        (application as ShittimApplication).command("cancel")
+        GestureService.instance?.overlay?.update("failed", "屏幕采集已停止，请回助手重新授权")
         handler.post {
             pending?.invoke(null, "屏幕采集已停止"); pending = null
             projection?.unregisterCallback(projectionCallback)

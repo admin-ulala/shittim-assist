@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">什亭助手</string>
-    <string name="accessibility_description">用于您主动启动的游戏自动化：识别前台应用并执行点击、滑动和返回。不会读取文本控件或上传数据。您可随时在系统设置关闭。</string>
+    <string name="accessibility_description">用于您主动启动的游戏自动化：识别前台应用并执行点击、滑动和返回。提供游戏内悬浮控制，并读取当前窗口根节点的包名以防误操作；不遍历文本控件、不上传数据。您可随时在系统设置关闭。</string>
 </resources>

@@ -36,3 +36,9 @@
 修正版提交 `6f63b0f` 已通过 GitHub Git Database API 上传，blob、tree、commit 与本地哈希逐级核对一致，并以非强制方式更新 main。[CI run 35035264060](https://github.com/admin-ulala/shittim-assist/actions/runs/35035264060) 全部成功。
 
 0.1.1 产物：Windows ZIP 12,225,362 bytes；Android artifact ZIP 72,189,218 bytes。两份下载均已与 GitHub artifact SHA-256 校验一致。正式 APK 签名、Android 权限联调和日常流程仍待完成。
+
+## 0.1.2 悬浮控制（开发中）
+
+新增无障碍悬浮球：拖动、展开、开始只读诊断、暂停/继续、停止、关闭；与工作台共用引擎。Application 持有 FlutterEngine，Activity 重建不销毁任务。前台包名实时查询 focused application window；截图要求移除悬浮控件后的新帧。停止采集或无障碍服务取消任务，进程重启不恢复运行。
+
+无障碍声明新增窗口读取能力，仅取根节点包名，不遍历文本。Android 编译与 MuMu 回归待验证，不能视为实机通过。

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'core/device.dart';
 import 'core/engine.dart';
+import 'core/overlay.dart';
 import 'core/storage.dart';
 import 'core/server.dart';
 
@@ -51,7 +53,7 @@ class Workbench extends StatefulWidget {
   State<Workbench> createState() => _WorkbenchState();
 }
 
-class _WorkbenchState extends State<Workbench> {
+class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
   static const titles = ['总览', '设备连接', '任务计划', '运行日志', '设置'];
   static const icons = [
     Icons.dashboard_outlined,
@@ -83,8 +85,34 @@ class _WorkbenchState extends State<Workbench> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initialize();
   }
+
+  void engineChanged() {
+    refresh();
+    if (Platform.isAndroid && engine != null) {
+      unawaited(
+        AndroidDevice.channel
+            .invokeMethod('overlayState', {
+              'state': engine!.state.name,
+              'message': engine!.error ?? stateLabel(engine!.state),
+            })
+            .catchError((Object _) {}),
+      );
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) refresh();
+  }
+
+  Future<void> showOverlay() => perform('打开悬浮控制', () async {
+    if (channel != 'bilibili') throw StateError('目前仅支持国服 B 服');
+    await AndroidDevice.channel.invokeMethod('showOverlay');
+    message = '悬浮球已开启：切到 B 服游戏，点击「什亭」→「开始只读诊断」。';
+  });
 
   void refresh() {
     if (mounted) setState(() {});
@@ -97,13 +125,22 @@ class _WorkbenchState extends State<Workbench> {
       await log!.load();
       server = await ServerProfile.load('cn');
       store = ConfigStore(File('${directory.path}/config.json'));
-      engine = AutomationEngine(log!, onChanged: refresh);
+      engine = AutomationEngine(log!, onChanged: engineChanged);
       try {
         _apply(await store!.load());
       } catch (e) {
         await log!.add('配置读取失败，使用默认值：$e', level: 'warning');
       }
-      if (Platform.isAndroid) device = AndroidDevice();
+      if (Platform.isAndroid) {
+        device = AndroidDevice();
+        final controls = OverlayCommands(
+          start: diagnose,
+          pause: () => engine?.pause(),
+          resume: () => engine?.resume(),
+          cancel: () => engine?.cancel(),
+        );
+        AndroidDevice.channel.setMethodCallHandler(controls.handle);
+      }
       message = '准备就绪。连接设备后可运行只读诊断。';
       ready = true;
     } catch (e) {
@@ -178,6 +215,13 @@ class _WorkbenchState extends State<Workbench> {
     await engine!.run(
       device!,
       (c) async {
+        if (Platform.isAndroid) {
+          final permissions = await AndroidDevice().capabilities();
+          if (permissions['accessibility'] != true ||
+              permissions['capture'] != true) {
+            throw StateError('请回助手开启无障碍并授权屏幕采集');
+          }
+        }
         await inspectDevice(c);
         screenshot = c.lastFrame;
       },
@@ -199,6 +243,8 @@ class _WorkbenchState extends State<Workbench> {
   };
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (Platform.isAndroid) AndroidDevice.channel.setMethodCallHandler(null);
     engine?.cancel();
     for (final c in [adb, address, pairAddress, pairCode, query]) {
       c.dispose();
@@ -445,10 +491,10 @@ class _WorkbenchState extends State<Workbench> {
               children: [
                 FilledButton.tonalIcon(
                   onPressed: ready && !locked && device != null
-                      ? diagnose
+                      ? (Platform.isAndroid ? showOverlay : diagnose)
                       : null,
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: const Text('运行只读诊断'),
+                  label: Text(Platform.isAndroid ? '开启悬浮控制' : '运行只读诊断'),
                 ),
                 OutlinedButton(
                   onPressed: () => setState(() => page = 1),
@@ -539,7 +585,9 @@ class _WorkbenchState extends State<Workbench> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('先开启无障碍手势服务，再授权屏幕采集。切回游戏后，通过通知可停止采集。'),
+              const Text(
+                '① 开启无障碍 ② 授权屏幕采集 ③ 开启悬浮控制。切到 B 服游戏，点击「什亭」展开后开始只读诊断。拖动悬浮球可移动位置；暂停、停止和关闭均在悬浮面板内。无障碍仅查询窗口根节点包名判断前台，不遍历文本。',
+              ),
               const SizedBox(height: 14),
               Wrap(
                 spacing: 10,
@@ -562,6 +610,10 @@ class _WorkbenchState extends State<Workbench> {
                             message = '屏幕采集已授权';
                           }),
                     child: const Text('授权屏幕采集'),
+                  ),
+                  FilledButton.tonal(
+                    onPressed: locked ? null : showOverlay,
+                    child: const Text('开启悬浮控制'),
                   ),
                   OutlinedButton(
                     onPressed: locked

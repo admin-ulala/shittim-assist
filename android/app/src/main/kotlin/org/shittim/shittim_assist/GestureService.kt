@@ -3,6 +3,8 @@ package org.shittim.shittim_assist
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
+import android.content.res.Configuration
+import android.view.accessibility.AccessibilityWindowInfo
 import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
@@ -11,18 +13,33 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 class GestureService : AccessibilityService() {
     companion object { @Volatile var instance: GestureService? = null; private set }
-    @Volatile var foregroundPackage: String = ""
-        private set
+    val overlay by lazy { FloatingControls(this) }
+    val foregroundPackage: String
+        get() {
+            // Overlay focus/events are not evidence that the game is foreground.
+            // Query the focused application window each time; unknown => fail closed.
+            if (getSystemService(android.app.KeyguardManager::class.java).isKeyguardLocked) return ""
+            val window = windows.firstOrNull { it.isFocused && it.type == AccessibilityWindowInfo.TYPE_APPLICATION }
+                ?: return ""
+            val node = window.root ?: return ""
+            return try { node.packageName?.toString() ?: "" } finally {
+                @Suppress("DEPRECATION")
+                node.recycle()
+            }
+        }
     private val busy = AtomicBoolean(false)
     private val handler = Handler(Looper.getMainLooper())
     override fun onServiceConnected() { instance = this }
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            foregroundPackage = event.packageName?.toString() ?: ""
-        }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
+    override fun onInterrupt() { (application as ShittimApplication).command("cancel") }
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        handler.post { overlay.clamp() }
     }
-    override fun onInterrupt() { foregroundPackage = "" }
-    override fun onDestroy() { instance = null; foregroundPackage = ""; super.onDestroy() }
+    override fun onDestroy() {
+        (application as ShittimApplication).command("cancel")
+        overlay.close(); instance = null; super.onDestroy()
+    }
     fun goBack(): Boolean = performGlobalAction(GLOBAL_ACTION_BACK)
 
     fun gesture(x1: Float, y1: Float, x2: Float, y2: Float, duration: Long, callback: (Boolean) -> Unit) {
