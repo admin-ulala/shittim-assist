@@ -119,7 +119,7 @@ class CaptureService : Service() {
         }
     }
     fun screenshot(afterNanos: Long = 0L, callback: (ByteArray?, String?) -> Unit) {
-        handler.post {
+        val accepted = handler.post {
             if (!active) { callback(null, "采集服务未就绪"); return@post }
             if (pending != null) { callback(null, "已有截图请求"); return@post }
             val bytes = latest
@@ -132,6 +132,9 @@ class CaptureService : Service() {
                 if (pending === callback) { pending = null; callback(null, "截图超时或屏幕已锁定") }
             }, 3000)
         }
+        // A stop can race the overlay's compositor delay. Never leave Dart
+        // waiting on a callback posted to a worker that has already quit.
+        if (!accepted) callback(null, "屏幕采集已停止，请重新授权")
     }
     override fun onDestroy() {
         active = false; instance = null
