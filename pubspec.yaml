@@ -1,7 +1,7 @@
 name: shittim_assist
 description: 什亭助手 — Windows 与 Android 游戏自动化工作台。
 publish_to: none
-version: 0.1.2+3
+version: 0.1.3+4
 environment:
   sdk: '>=3.8.0 <4.0.0'
 dependencies:

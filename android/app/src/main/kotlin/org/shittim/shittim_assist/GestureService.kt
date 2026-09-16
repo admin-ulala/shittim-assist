@@ -34,7 +34,7 @@ class GestureService : AccessibilityService() {
     override fun onInterrupt() { (application as ShittimApplication).command("cancel") }
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        handler.post { overlay.clamp() }
+        handler.post { overlay.resize() }
     }
     override fun onDestroy() {
         (application as ShittimApplication).command("cancel")

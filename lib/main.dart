@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'core/device.dart';
 import 'core/engine.dart';
 import 'core/overlay.dart';
@@ -89,18 +89,61 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
     _initialize();
   }
 
-  void engineChanged() {
-    refresh();
-    if (Platform.isAndroid && engine != null) {
-      unawaited(
-        AndroidDevice.channel
-            .invokeMethod('overlayState', {
-              'state': engine!.state.name,
-              'message': engine!.error ?? stateLabel(engine!.state),
-            })
-            .catchError((Object _) {}),
+  Map<String, dynamic> overlaySnapshot() => {
+    'config': config.toJson(),
+    'state': engine?.state.name ?? 'idle',
+    'message': engine?.error ?? stateLabel(engine?.state ?? RunState.idle),
+    'locked': locked,
+    'logs': (log?.entries ?? []).reversed
+        .take(5)
+        .map((e) => {'message': e['message'], 'level': e['level']})
+        .toList(),
+  };
+
+  void syncOverlay() {
+    if (!Platform.isAndroid || !ready || !mounted) return;
+    unawaited(
+      AndroidDevice.channel
+          .invokeMethod('overlaySnapshot', overlaySnapshot())
+          .catchError((Object _) {}),
+    );
+  }
+
+  void engineChanged() => refresh();
+
+  void changeConfig(VoidCallback change) {
+    if (locked) return;
+    setState(change);
+    syncOverlay();
+  }
+
+  Future<Object?> handleOverlay(
+    MethodCall call,
+    OverlayCommands controls,
+  ) async {
+    if (!ready) throw PlatformException(code: 'NOT_READY', message: '助手正在初始化');
+    if (call.method == 'overlaySnapshot') return overlaySnapshot();
+    if (call.method == 'overlayPatch') {
+      if (locked) throw PlatformException(code: 'BUSY', message: '请先停止任务再修改配置');
+      final next = applyOverlayPatch(
+        config,
+        Map<String, dynamic>.from(call.arguments as Map),
       );
+      working = true;
+      refresh();
+      try {
+        await store!.save(next);
+        _apply(next);
+        message = '悬浮面板配置已同步并保存';
+        await log!.add(message);
+      } finally {
+        working = false;
+        refresh();
+      }
+      return overlaySnapshot();
     }
+    await controls.handle(call);
+    return null;
   }
 
   @override
@@ -110,12 +153,14 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
 
   Future<void> showOverlay() => perform('打开悬浮控制', () async {
     if (channel != 'bilibili') throw StateError('目前仅支持国服 B 服');
+    syncOverlay();
     await AndroidDevice.channel.invokeMethod('showOverlay');
-    message = '悬浮球已开启：切到 B 服游戏，点击「什亭」→「开始只读诊断」。';
+    message = '悬浮球已开启：切到 B 服游戏，点击应用图标悬浮球→「开始只读诊断」。';
   });
 
   void refresh() {
     if (mounted) setState(() {});
+    syncOverlay();
   }
 
   Future<void> _initialize() async {
@@ -139,7 +184,9 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
           resume: () => engine?.resume(),
           cancel: () => engine?.cancel(),
         );
-        AndroidDevice.channel.setMethodCallHandler(controls.handle);
+        AndroidDevice.channel.setMethodCallHandler(
+          (call) => handleOverlay(call, controls),
+        );
       }
       message = '准备就绪。连接设备后可运行只读诊断。';
       ready = true;
@@ -777,7 +824,7 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
                 contentPadding: EdgeInsets.zero,
                 onChanged: locked
                     ? null
-                    : (v) => setState(() {
+                    : (v) => changeConfig(() {
                         v == true
                             ? selected.add(item.$1)
                             : selected.remove(item.$1);
@@ -798,7 +845,7 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
               title: const Text('只识别，不点击'),
               subtitle: const Text('默认开启。关闭也不会启用尚未适配的任务。'),
               value: dryRun,
-              onChanged: locked ? null : (v) => setState(() => dryRun = v),
+              onChanged: locked ? null : (v) => changeConfig(() => dryRun = v),
             ),
             number('计划次数', maxRuns, 1, 999, (v) => maxRuns = v),
             number('保留体力', reserve, 0, 999, (v) => reserve = v),
@@ -831,14 +878,14 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
         IconButton(
           onPressed: locked || value <= min
               ? null
-              : () => setState(() => change(value - 1)),
+              : () => changeConfig(() => change(value - 1)),
           icon: const Icon(Icons.remove_circle_outline),
         ),
         SizedBox(width: 38, child: Text('$value', textAlign: TextAlign.center)),
         IconButton(
           onPressed: locked || value >= max
               ? null
-              : () => setState(() => change(value + 1)),
+              : () => changeConfig(() => change(value + 1)),
           icon: const Icon(Icons.add_circle_outline),
         ),
       ],
@@ -925,7 +972,9 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
                   child: Text('国服 · 官服（待适配）'),
                 ),
               ],
-              onChanged: locked ? null : (v) => setState(() => channel = v!),
+              onChanged: locked
+                  ? null
+                  : (v) => changeConfig(() => channel = v!),
             ),
             const SizedBox(height: 16),
             const Text('日服、港澳台／国际服将在后续资源包中加入。'),

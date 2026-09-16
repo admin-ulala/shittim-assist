@@ -1,5 +1,23 @@
 import 'dart:async';
 import 'package:flutter/services.dart';
+import 'storage.dart';
+
+/// Both surfaces use AppConfig validation and the same persisted document.
+/// Only mobile task fields can be patched; desktop connection data is preserved.
+AppConfig applyOverlayPatch(AppConfig current, Map<String, dynamic> patch) {
+  const editable = {
+    'channel',
+    'dryRun',
+    'maxRuns',
+    'staminaReserve',
+    'timeoutSeconds',
+    'selected',
+  };
+  if (patch.isEmpty || patch.keys.any((key) => !editable.contains(key))) {
+    throw const FormatException('悬浮面板包含不支持的配置项');
+  }
+  return AppConfig.fromJson({...current.toJson(), ...patch});
+}
 
 /// Native controls share the existing engine. A pending start must not block stop.
 class OverlayCommands {

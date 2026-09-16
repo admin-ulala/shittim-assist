@@ -46,3 +46,11 @@ TemplateMatcher：独立参考实现，用于回放与后续资源适配
 OpenCV/OCR、定时队列、设备归一化、局域网伴侣连接、主线章节和其他区服。伴侣协议必须有配对、身份验证、加密及撤销，不开放无认证远程输入。
 
 公开发行前完成原生构建、签名、资源许可和实机验证。CI 工作流已定义不代表已运行通过。
+
+## Android 悬浮工作台
+
+Application 持有单一 FlutterEngine 与 DeviceBridge；Activity 只负责承载界面和权限弹窗。GestureService 承载非焦点 accessibility overlay。折叠图标使用 PackageManager 返回的应用图标，展开视图提供运行、任务、配置三个页签。
+
+配置的权威来源是 Dart 工作台的 AppConfig。主界面修改主动发送 snapshot；悬浮面板打开时也拉取最新 snapshot。面板只提交字段 patch，由 Dart 白名单过滤、AppConfig 校验后写入同一个 ConfigStore，再广播结果。保存和运行期间拒绝修改，避免双界面并发覆盖。原生层不另存配置，也不持有流程副本。
+
+原生桥接：`overlayCommand` 启停控制、`overlaySnapshot` 双向状态同步、`overlayPatch` 增量保存。窗口不请求焦点；数字使用步进按钮，不唤起键盘。暂停/取消消息可在启动调用未返回时独立处理。进程被系统终止后不自动恢复任务。

@@ -15,6 +15,13 @@ import io.flutter.plugin.common.MethodChannel
 class DeviceBridge(private val context: Context, engine: FlutterEngine) {
     var activity: MainActivity? = null
     private val channel = MethodChannel(engine.dartExecutor.binaryMessenger, "org.shittim.assist/device")
+    fun request(method: String, arguments: Any?, callback: (Any?, String?) -> Unit) {
+        channel.invokeMethod(method, arguments, object : MethodChannel.Result {
+            override fun success(result: Any?) { callback(result, null) }
+            override fun error(code: String, message: String?, details: Any?) { callback(null, message ?: "操作失败") }
+            override fun notImplemented() { callback(null, "请先打开助手完成初始化") }
+        })
+    }
     fun command(action: String) {
         channel.invokeMethod("overlayCommand", action, object : MethodChannel.Result {
             override fun success(result: Any?) {}
@@ -80,6 +87,10 @@ class DeviceBridge(private val context: Context, engine: FlutterEngine) {
                             val service = GestureService.instance ?: error("请先开启无障碍服务")
                             check(CaptureService.active) { "请先授权屏幕采集，等待采集就绪后重试" }
                             service.overlay.show()
+                            result.success(null)
+                        }
+                        "overlaySnapshot" -> {
+                            GestureService.instance?.overlay?.sync(call.arguments as? Map<*, *> ?: emptyMap<Any, Any>())
                             result.success(null)
                         }
                         "overlayState" -> {
