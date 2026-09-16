@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:math';
 import 'package:image/image.dart' as img;
 import 'device.dart';
 import 'storage.dart';
+import 'geometry.dart';
 
 enum RunState { idle, running, paused, stopping, succeeded, cancelled, failed }
 
@@ -59,6 +61,27 @@ class RunContext {
   }
 
   /// Input is never retried implicitly. Callers must re-observe and verify.
+  Future<void> tapReference(
+    int x,
+    int y, {
+    int referenceWidth = 1280,
+    int referenceHeight = 720,
+    Rectangle<int>? content,
+  }) async {
+    final frame = lastFrame == null ? null : img.decodeImage(lastFrame!);
+    if (frame == null) throw StateError('需要新的截图才能映射坐标');
+    final geometry = ScreenGeometry(
+      width: frame.width,
+      height: frame.height,
+      referenceWidth: referenceWidth,
+      referenceHeight: referenceHeight,
+      content: content,
+    );
+    final mapped = geometry.point(x, y);
+    await tap(mapped.x, mapped.y);
+  }
+
+  /// Coordinates here are physical pixels in the current screenshot.
   Future<void> tap(int x, int y) async {
     await control.checkpoint();
     final frame = lastFrame == null ? null : img.decodeImage(lastFrame!);

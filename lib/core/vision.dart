@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
+import 'geometry.dart';
 
 class MatchResult {
   const MatchResult(this.x, this.y, this.width, this.height, this.confidence);
@@ -13,6 +14,37 @@ class MatchResult {
 /// Portable reference matcher. Production OpenCV/OCR backends can replace it.
 /// Searches within a bounded ROI at a fixed scale, never assumes wm size.
 class TemplateMatcher {
+  /// Scale a reference template and ROI to a validated screenshot viewport.
+  MatchResult? findReference(
+    Uint8List frame,
+    Uint8List template, {
+    required ScreenGeometry geometry,
+    required Rectangle<int> referenceRegion,
+    double threshold = .94,
+  }) {
+    final source = img.decodeImage(frame), target = img.decodeImage(template);
+    if (source == null || target == null) throw const FormatException('无效图片');
+    if (source.width != geometry.width || source.height != geometry.height) {
+      throw StateError('截图尺寸已改变，请重新建立画面映射');
+    }
+    final roi = geometry.region(referenceRegion);
+    final scaled = img.copyResize(
+      target,
+      width: max(1, (target.width * geometry.scale).round()),
+      height: max(1, (target.height * geometry.scale).round()),
+      interpolation: img.Interpolation.linear,
+    );
+    return find(
+      frame,
+      Uint8List.fromList(img.encodePng(scaled)),
+      threshold: threshold,
+      left: roi.left,
+      top: roi.top,
+      right: roi.right,
+      bottom: roi.bottom,
+    );
+  }
+
   MatchResult? find(
     Uint8List frame,
     Uint8List template, {

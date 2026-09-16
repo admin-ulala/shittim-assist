@@ -301,7 +301,8 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 860;
+    final window = MediaQuery.sizeOf(context);
+    final wide = window.width >= 860 && window.height >= 620;
     return Scaffold(
       body: SafeArea(
         child: Row(
@@ -960,6 +961,7 @@ class _WorkbenchState extends State<Workbench> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: channel,
               decoration: const InputDecoration(labelText: '区服与渠道'),
               items: const [

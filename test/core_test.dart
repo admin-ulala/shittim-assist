@@ -29,6 +29,17 @@ class FakeDevice implements DeviceBackend {
   Future<void> swipe(int x1, int y1, int x2, int y2, Duration duration) async {}
 }
 
+class ScaledDevice extends FakeDevice {
+  (int, int)? lastTap;
+  @override
+  Future<Uint8List> screenshot() async =>
+      Uint8List.fromList(img.encodePng(img.Image(width: 800, height: 450)));
+  @override
+  Future<void> tap(int x, int y) async {
+    lastTap = (x, y);
+  }
+}
+
 void main() {
   late Directory temp;
   late EventLog log;
@@ -39,6 +50,29 @@ void main() {
   tearDown(() async {
     await temp.delete(recursive: true);
   });
+
+  test(
+    'reference input uses captured dimensions and retains foreground safety',
+    () async {
+      final d = ScaledDevice();
+      final c = RunContext(
+        d,
+        RunControl(const Duration(seconds: 5)),
+        log,
+        'resolution',
+        dryRun: false,
+        expectedPackage: 'game',
+      );
+      await c.capture();
+      await c.tapReference(640, 360);
+      expect(d.lastTap, (400, 225));
+      d.foreground = 'other';
+      d.lastTap = null;
+      await c.capture();
+      await expectLater(c.tapReference(640, 360), throwsStateError);
+      expect(d.lastTap, isNull);
+    },
+  );
 
   test('preview never injects and validates screenshot bounds', () async {
     final d = FakeDevice();

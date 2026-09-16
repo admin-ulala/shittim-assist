@@ -25,7 +25,7 @@ TemplateMatcher：独立参考实现，用于回放与后续资源适配
 5. 坐标以当前截图为准；截图超过 2 秒、坐标越界或前台不匹配时拒绝点击。后续业务仍需目标再识别和执行后验证。
 6. 锁按设备 ID 生效，ADB 别名可能指向同一设备。当前 UI 只开放单设备；多设备功能前需归一化硬件标识。
 7. 流程必须调用 RunControl.checkpoint/delay，底层请求必须自行有界。不合作的任意 Future 无法由 Dart 强行取消；本版不接受不受信任的脚本。
-8. Android 采集服务不等于后台流程引擎，服务托管流程和悬浮控制尚待实现。
+8. Android Application 保留 FlutterEngine，采集前台服务维持采集生命周期，GestureService 提供悬浮工作台；系统终止进程后不自动恢复任务。
 
 ## 阶段
 
@@ -54,3 +54,9 @@ Application 持有单一 FlutterEngine 与 DeviceBridge；Activity 只负责承�
 配置的权威来源是 Dart 工作台的 AppConfig。主界面修改主动发送 snapshot；悬浮面板打开时也拉取最新 snapshot。面板只提交字段 patch，由 Dart 白名单过滤、AppConfig 校验后写入同一个 ConfigStore，再广播结果。保存和运行期间拒绝修改，避免双界面并发覆盖。原生层不另存配置，也不持有流程副本。
 
 原生桥接：`overlayCommand` 启停控制、`overlaySnapshot` 双向状态同步、`overlayPatch` 增量保存。窗口不请求焦点；数字使用步进按钮，不唤起键盘。暂停/取消消息可在启动调用未返回时独立处理。进程被系统终止后不自动恢复任务。
+
+## 分辨率适配
+
+Flutter 布局按逻辑宽高选择侧栏或底部导航；原生悬浮面板扣除系统栏和缺口后限制宽高，内部滚动区域使用剩余高度。截图和输入 API 始终使用实际图像像素，不使用 DPI 推算坐标。
+
+`ScreenGeometry` 以资源参考尺寸（默认 1280×720）映射到截图；`RunContext.tapReference` 复用原有时效、边界、前台与取消保护；`TemplateMatcher.findReference` 同步缩放模板和 ROI。宽高比不一致时需提供已验证的内容 Rectangle；不根据分辨率臆测游戏布局。不同布局资源、锚点识别和真实模板准确率仍需后续验证。

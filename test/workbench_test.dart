@@ -29,15 +29,25 @@ void main() {
       }
     }
   });
-  for (final size in [
-    const Size(1440, 1000),
-    const Size(390, 844),
-    const Size(800, 450),
-    const Size(640, 360),
+  for (final display in [
+    (const Size(1440, 1000), 1.0),
+    (const Size(390, 844), 1.0),
+    (const Size(800, 450), 1.0),
+    (const Size(640, 360), 1.0),
+    (const Size(1280, 720), 1.5),
+    (const Size(1920, 1080), 2.0),
+    (const Size(1600, 900), 1.5),
+    (const Size(2560, 1440), 2.0),
+    (const Size(960, 540), 1.5),
+    (const Size(1080, 2400), 3.0),
+    (const Size(720, 1280), 2.0),
+    (const Size(1280, 720), 3.0),
+    (const Size(2400, 1080), 2.5),
   ]) {
-    testWidgets('workbench navigation fits ${size.width}', (tester) async {
+    final size = display.$1;
+    testWidgets('workbench fits $size at DPR ${display.$2}', (tester) async {
       tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = 1;
+      tester.view.devicePixelRatio = display.$2;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       final boundary = GlobalKey();

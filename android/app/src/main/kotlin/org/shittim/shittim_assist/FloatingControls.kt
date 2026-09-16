@@ -10,6 +10,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.view.WindowInsets
 import android.widget.*
 import kotlin.math.abs
 
@@ -41,6 +42,14 @@ class FloatingControls(private val service: GestureService) {
     private var logs: List<Map<*, *>> = emptyList()
     private var notice = "与主界面同步 · 修改自动保存"
     private val editable get() = !locked && !pending && config.isNotEmpty()
+    private fun available(): android.graphics.Rect {
+        val metrics = wm.currentWindowMetrics
+        val bounds = android.graphics.Rect(metrics.bounds)
+        val insets = metrics.windowInsets.getInsetsIgnoringVisibility(
+            WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+        return android.graphics.Rect(0, 0, bounds.width() - insets.left - insets.right,
+            bounds.height() - insets.top - insets.bottom)
+    }
     private fun dp(value: Int) = (value * service.resources.displayMetrics.density).toInt()
     private fun drawable(color: Int, radius: Int = 16, border: Boolean = false) = GradientDrawable().apply {
         setColor(color); cornerRadius = dp(radius).toFloat()
@@ -110,8 +119,8 @@ class FloatingControls(private val service: GestureService) {
         val container = root ?: return
         container.removeAllViews()
         container.background = drawable(Color.rgb(246, 251, 255), if (expanded) 22 else 28, true)
-        params.width = if (expanded) minOf(dp(360), wm.currentWindowMetrics.bounds.width() - dp(24)) else dp(56)
-        params.height = WindowManager.LayoutParams.WRAP_CONTENT
+        params.width = if (expanded) minOf(dp(360), available().width() - dp(16)) else dp(56)
+        params.height = if (expanded) minOf(dp(480), available().height() - dp(8)) else dp(56)
         if (!expanded) {
             body = null; scroller = null; footer = null
             val bubble = icon().apply {
@@ -140,8 +149,7 @@ class FloatingControls(private val service: GestureService) {
             container.addView(tabs)
             body = column().apply { setPadding(dp(14), 0, dp(14), dp(8)) }
             scroller = ScrollView(service).apply { isFillViewport = false; addView(body) }
-            val height = minOf(dp(330), wm.currentWindowMetrics.bounds.height() - dp(172)).coerceAtLeast(dp(100))
-            container.addView(scroller, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, height))
+            container.addView(scroller, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
             footer = text(notice, 11f, muted).apply { setPadding(dp(16), dp(8), dp(16), dp(12)); maxLines = 2 }
             container.addView(footer)
             renderBody()
@@ -269,7 +277,7 @@ class FloatingControls(private val service: GestureService) {
     fun clamp() {
         val view = root ?: return
         if (!view.isAttachedToWindow) return
-        val bounds = wm.currentWindowMetrics.bounds
+        val bounds = available()
         params.x = params.x.coerceIn(0, (bounds.width() - view.width).coerceAtLeast(0))
         params.y = params.y.coerceIn(0, (bounds.height() - view.height).coerceAtLeast(0))
         wm.updateViewLayout(view, params)
